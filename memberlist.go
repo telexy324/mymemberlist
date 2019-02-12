@@ -60,9 +60,9 @@ type Memberlist struct {
 	awareness  *awareness
 
 	tickerLock sync.Mutex
-	tickers    []*time.Ticker
+	tickers    []*time.Ticker //存储probe和gossip的ticker
 	stopTick   chan struct{}
-	probeIndex int
+	probeIndex int //用来定位m.nodes中的node,依次来probe
 
 	ackLock     sync.Mutex
 	ackHandlers map[uint32]*ackHandler //用于inderectping的回调，根据seq序列号寻找

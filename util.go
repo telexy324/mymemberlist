@@ -76,7 +76,7 @@ func retransmitLimit(retransmitMult, n int) int {
 }
 
 // shuffleNodes randomly shuffles the input nodes using the Fisher-Yates shuffle
-func shuffleNodes(nodes []*nodeState) {
+func shuffleNodes(nodes []*nodeState) { //使用洗牌算法打乱节点
 	n := len(nodes)
 	rand.Shuffle(n, func(i, j int) { //rand的suffle,传入数组和自己定义的一个swap函数
 		nodes[i], nodes[j] = nodes[j], nodes[i]
