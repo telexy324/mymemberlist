@@ -396,7 +396,7 @@ func (m *Memberlist) setAlive() error {
 		}
 	}
 
-	a := alive{
+	a := alive{ //把自己加进去
 		Incarnation: m.nextIncarnation(),
 		Node:        m.config.Name,
 		Addr:        addr,

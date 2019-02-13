@@ -45,7 +45,7 @@ type Config struct {
 	// waits for an ack from any single indirect node, so increasing this
 	// number will increase the likelihood that an indirect probe will succeed
 	// at the expense of bandwidth. 发送indirectcheck的个数，只要有一个返回就成功了，增大则增大成功的机率，以带宽消耗为代价
-	IndirectChecks int
+	IndirectChecks int //就是在直接ping的情况下，把这个参数写到回调函数中，如果失败了，根据这个决定发起多少个indirectping
 
 	// RetransmitMult is the multiplier for the number of retransmissions
 	// that are attempted for messages broadcasted over gossip. The actual

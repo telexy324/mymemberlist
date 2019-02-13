@@ -20,7 +20,7 @@ type awareness struct {
 
 	// score is the current awareness score. Lower values are healthier and
 	// zero is the minimum value.
-	score int
+	score int  //用来计算probeinterval
 }
 
 // newAwareness returns a new awareness object.

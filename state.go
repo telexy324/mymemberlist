@@ -84,14 +84,14 @@ func (m *Memberlist) schedule() {
 	defer m.tickerLock.Unlock()
 
 	// If we already have tickers, then don't do anything, since we're
-	// scheduled
+	// scheduled 正常应该有两个ticker?
 	if len(m.tickers) > 0 {
 		return
 	}
 
 	// Create the stop tick channel, a blocking channel. We close this
 	// when we should stop the tickers.
-	stopCh := make(chan struct{})
+	stopCh := make(chan struct{}) //用来停止ticker
 
 	// Create a new probeTicker
 	if m.config.ProbeInterval > 0 {
@@ -249,16 +249,16 @@ func (m *Memberlist) probeNode(node *nodeState) {
 	// We use our health awareness to scale the overall probe interval, so we
 	// slow down if we detect problems. The ticker that calls us can handle
 	// us running over the base interval, and will skip missed ticks.
-	probeInterval := m.awareness.ScaleTimeout(m.config.ProbeInterval)
+	probeInterval := m.awareness.ScaleTimeout(m.config.ProbeInterval) //动态获取间隔
 	if probeInterval > m.config.ProbeInterval {
 		metrics.IncrCounter([]string{"memberlist", "degraded", "probe"}, 1)
 	}
 
 	// Prepare a ping message and setup an ack handler.
 	ping := ping{SeqNo: m.nextSeqNo(), Node: node.Name}
-	ackCh := make(chan ackMessage, m.config.IndirectChecks+1)
+	ackCh := make(chan ackMessage, m.config.IndirectChecks+1) //回调函数被使用一次，就往这个channel中放入一个ackmssage
 	nackCh := make(chan struct{}, m.config.IndirectChecks+1)
-	m.setProbeChannels(ping.SeqNo, ackCh, nackCh, probeInterval)
+	m.setProbeChannels(ping.SeqNo, ackCh, nackCh, probeInterval) //ping请求和由此产生的indirectping共享一个序列号
 
 	// Mark the sent time here, which should be after any pre-processing but
 	// before system calls to do the actual send. This probably over-reports
@@ -272,12 +272,12 @@ func (m *Memberlist) probeNode(node *nodeState) {
 	// soon as possible.
 	deadline := sent.Add(probeInterval)
 	addr := node.Address()
-	if node.State == stateAlive {
+	if node.State == stateAlive { //alive的只ping,同时加上需要广播的信息
 		if err := m.encodeAndSendMsg(addr, pingMsg, &ping); err != nil {
 			m.logger.Printf("[ERR] memberlist: Failed to send ping: %s", err)
 			return
 		}
-	} else {
+	} else { //suspect状态的节点，同时发送ping和suspect，不附加广播消息
 		var msgs [][]byte
 		if buf, err := encode(pingMsg, &ping); err != nil {
 			m.logger.Printf("[ERR] memberlist: Failed to encode ping message: %s", err)
@@ -306,15 +306,15 @@ func (m *Memberlist) probeNode(node *nodeState) {
 	// at the end of this function, which will alter this delta variable
 	// accordingly.
 	awarenessDelta := -1
-	defer func() {
+	defer func() { //最终都会使健康状态好转1
 		m.awareness.ApplyDelta(awarenessDelta)
 	}()
 
 	// Wait for response or round-trip-time.
 	select {
-	case v := <-ackCh:
-		if v.Complete == true {
-			if m.config.Ping != nil {
+	case v := <-ackCh: //等待回调函数向这个channel中发送ack数据
+		if v.Complete == true { //这里只要传入的都是true
+			if m.config.Ping != nil { //注册了ping delegate则调用
 				rtt := v.Timestamp.Sub(sent)
 				m.config.Ping.NotifyPingComplete(&node.Node, rtt, v.Payload)
 			}
@@ -730,7 +730,7 @@ type ackMessage struct {
 // passed to the nackCh, which can be nil if not needed.
 func (m *Memberlist) setProbeChannels(seqNo uint32, ackCh chan ackMessage, nackCh chan struct{}, timeout time.Duration) {
 	// Create handler functions for acks and nacks
-	ackFn := func(payload []byte, timestamp time.Time) {
+	ackFn := func(payload []byte, timestamp time.Time) { //回调函数把raw信息做成ackmessage，压入ackCh中
 		select {
 		case ackCh <- ackMessage{true, payload, timestamp}:
 		default:
@@ -750,7 +750,7 @@ func (m *Memberlist) setProbeChannels(seqNo uint32, ackCh chan ackMessage, nackC
 	m.ackLock.Unlock()
 
 	// Setup a reaping routing
-	ah.timer = time.AfterFunc(timeout, func() {
+	ah.timer = time.AfterFunc(timeout, func() { //到期，删除handler
 		m.ackLock.Lock()
 		delete(m.ackHandlers, seqNo)
 		m.ackLock.Unlock()
@@ -818,7 +818,7 @@ func (m *Memberlist) refute(me *nodeState, accusedInc uint32) { //参数是自�
 	me.Incarnation = inc
 
 	// Decrease our health because we are being asked to refute a problem.
-	m.awareness.ApplyDelta(1)
+	m.awareness.ApplyDelta(1) //自己被怀疑，所以健康状态+1
 
 	// Format and broadcast an alive message.
 	a := alive{
